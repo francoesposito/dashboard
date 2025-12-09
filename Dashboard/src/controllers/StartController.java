@@ -1,0 +1,91 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/javafx/FXMLController.java to edit this template
+ */
+package controllers;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.ResourceBundle;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.fxml.Initializable;
+import javafx.scene.control.Button;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Screen;
+import javafx.geometry.Rectangle2D;
+
+;
+
+/**
+ * FXML Controller class
+ *
+ * @author Franco
+ */
+public class StartController implements Initializable {
+
+    @FXML
+    private Button btnCargar;
+
+    /**
+     * Initializes the controller class.
+     */
+    @Override
+    public void initialize(URL url, ResourceBundle rb) {
+        // TODO
+    }
+
+    @FXML
+    private void handleCargar(ActionEvent event) {
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Buscar Archivo CSV");
+
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Archivos CSV", "*.csv")
+        );
+
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+
+        File archivoSeleccionado = fileChooser.showOpenDialog(stage);
+
+        if (archivoSeleccionado != null) {
+            System.out.println("Archivo elegido: " + archivoSeleccionado.getAbsolutePath());
+
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/dashboard.fxml"));
+                Parent root = loader.load();
+
+                DashboardController controller = loader.getController();
+
+
+                Scene scene = new Scene(root);
+                Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
+
+
+                stage.setX(screenBounds.getMinX());
+                stage.setY(screenBounds.getMinY());
+                stage.setWidth(screenBounds.getWidth());
+                stage.setHeight(screenBounds.getHeight());
+                stage.setMaximized(true);
+
+                stage.setScene(scene);
+                stage.show();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                System.out.println("Error al cargar la pantalla del Dashboard: " + e.getMessage());
+            }
+
+        } else {
+            System.out.println("El usuario canceló la selección.");
+        }
+    }
+
+}
