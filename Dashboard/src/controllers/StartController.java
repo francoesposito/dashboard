@@ -7,6 +7,7 @@ package controllers;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.List;
 import java.util.ResourceBundle;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -20,6 +21,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.geometry.Rectangle2D;
+import models.Venta;
+import utils.dataload;
 
 ;
 
@@ -57,6 +60,13 @@ public class StartController implements Initializable {
 
         if (archivoSeleccionado != null) {
             System.out.println("Archivo elegido: " + archivoSeleccionado.getAbsolutePath());
+            dataload loaderVentas = new dataload();
+            List<Venta> misVentas = loaderVentas.cargarVentasDesdeCSV(archivoSeleccionado);
+
+            System.out.println("Se cargaron " + misVentas.size() + " ventas.");
+            if (!misVentas.isEmpty()) {
+                System.out.println("Ejemplo: " + misVentas.get(0).toString());
+            }
 
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/dashboard.fxml"));
@@ -64,10 +74,10 @@ public class StartController implements Initializable {
 
                 DashboardController controller = loader.getController();
 
-
+                controller.setVentas(misVentas);
+                
                 Scene scene = new Scene(root);
                 Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
-
 
                 stage.setX(screenBounds.getMinX());
                 stage.setY(screenBounds.getMinY());

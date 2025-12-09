@@ -8,19 +8,17 @@ package models;
  *
  * @author Franco
  */
-public class Vendedor extends Persona {
-
-
-    public Vendedor(int codigo, String nombre) {
+public class Empresa extends Persona {
+    
+    public Empresa(int codigo, String nombre){
         super(codigo, nombre);
     }
 
-    
     @Override
     public int getCodigo() {
         return codigo;
     }
-
+    
     @Override
     public void setCodigo(int codigo) {
         this.codigo = codigo;
@@ -39,17 +37,14 @@ public class Vendedor extends Persona {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Vendedor{");
+        sb.append("Empresa{");
         sb.append(super.toString());
         sb.append('}');
         return sb.toString();
     }
     
-    @Override
-    public boolean equals(Object obj){
-        return super.equals(this);
-    }
+    
+    
+    
     
 }
-
-
