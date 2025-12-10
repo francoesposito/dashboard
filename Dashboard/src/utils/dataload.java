@@ -51,34 +51,35 @@ public class dataload {
 
                     // --- 2. CLIENTE (Indices 4 al 12) ---
                     int cliCod = parseIntSeguro(datos.get(4));
-                    String cliNom = datos.get(7).trim();
-                    String cliDir = datos.get(8).trim();
-                    String cliCP = datos.get(6).trim();
-                    String cliLoc = datos.get(9).trim();
-                    String cliProv = datos.get(10).trim();
-                    String cliRub = datos.get(11).trim();
-                    String cliGrup = datos.get(12).trim();
+                    String cliNom = datos.get(5).trim();
+                    String cliDir = datos.get(6).trim();
+                    String cliCP = datos.get(7).trim();
+                    String cliLoc = datos.get(8).trim();
+                    String cliProv = datos.get(9).trim();
+                    String cliRub = datos.get(10).trim();
+                    String cliGrup = datos.get(11).trim();
 
                     Cliente cliente = new Cliente(cliCod, cliNom, cliDir, cliCP, cliLoc, cliProv, cliRub, cliGrup);
 
                     // --- 3. ARTICULO (Indices 13 al 21) ---
-                    int artCod = parseIntSeguro(datos.get(13));
-                    String artDesc = datos.get(14).trim();
-                    String artRub = datos.get(15).trim(); // Rubro Articulo
-                    String artLin = datos.get(16).trim();
-                    String artDiv = datos.get(17).trim();
-                    String artGrup = datos.get(18).trim();
-                    int artCont = 1; // Default
-                    String artProv = datos.get(20).trim();
-                    String artEAN = datos.get(21).trim();
-
-                    Articulo articulo = new Articulo(artCod, artDesc, artRub, artLin, artDiv, artGrup, artCont, artProv, artEAN, 0);
+                    int artCod = parseIntSeguro(datos.get(12));
+                    String artDesc = datos.get(13).trim();
+                    String artRub = datos.get(14).trim(); // Rubro Articulo
+                    String artLin = datos.get(15).trim();
+                    String artDiv = datos.get(16).trim();
+                    String artGrup = datos.get(17).trim();
+                    int artCont = parseIntSeguro(datos.get(18)); // Default
+                    String artProv = datos.get(19).trim();
+                    String artEAN = datos.get(20).trim();
+                    int artCodComp = parseIntSeguro(datos.get(21));
+                    
+                    Articulo articulo = new Articulo(artCod, artDesc, artRub, artLin, artDiv, artGrup, artCont, artProv, artEAN, artCodComp);
 
                     // --- 4. VENDEDOR (Indices 22 y 23) ---
                     // Indice 22: Código puro (ej: 18) -> Es el más seguro
                     // Indice 23: Nombre completo (ej: "018-BIRD, SEBASTIAN") -> Gracias al parser, esto llega entero!
-                    int vendCod = parseIntSeguro(datos.get(22));
-                    String vendNom = datos.get(23).trim();
+                    int vendCod = parseIntSeguro(datos.get(24));
+                    String vendNom = datos.get(25).trim();
 
                     // Limpieza extra por si queremos sacar el "018-" del nombre
                     if (vendNom.contains("-")) {
@@ -101,11 +102,13 @@ public class dataload {
                     // Col Y (24) = Bultos
                     // Col Z (25) = Cantidad
                     // Col AA (26) = Neto
-                    double bultos = parseDoubleSeguro(datos.get(24));
-                    int cantidad = (int) parseDoubleSeguro(datos.get(25));
-                    double neto = parseDoubleSeguro(datos.get(26));
+                    double bultos = parseDoubleSeguro(datos.get(26));
+                    int cantidad = (int) parseDoubleSeguro(datos.get(27));
+                    double neto = parseDoubleSeguro(datos.get(28));
+                    String numFactura = datos.get(22);
+                    String tipoComprobante = datos.get(23);
 
-                    Venta venta = new Venta(fecha, anioMes, empresa, cliente, articulo, vendedor, "0000", "FACTURA", bultos, cantidad, neto);
+                    Venta venta = new Venta(fecha, anioMes, empresa, cliente, articulo, vendedor, numFactura, tipoComprobante, bultos, cantidad, neto);
                     listaVentas.add(venta);
 
                 } catch (Exception e) {
