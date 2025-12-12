@@ -24,6 +24,13 @@ import javafx.scene.control.ToggleButton;
 import models.Venta;
 import javafx.scene.control.Tooltip;
 import javafx.util.Duration;
+import java.util.ArrayList;
+import javafx.scene.control.ComboBox;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Collections;
+import javafx.event.ActionEvent;
+import javafx.scene.chart.CategoryAxis;
 
 /**
  * FXML Controller class
@@ -50,51 +57,67 @@ public class DashboardController implements Initializable {
     @FXML
     private LineChart<String, Number> chartTiempo;
 
-    @FXML 
+    @FXML
     private ToggleButton btnNeto;
-    
-    @FXML 
+
+    @FXML
     private ToggleButton btnBultos;
-    
-    @FXML 
+
+    @FXML
     private Label lblTituloTotal;
-    
+
+    @FXML
+    private ComboBox<String> cmbMeses;
+
     private List<Venta> listaVentas;
-    
-    
+
+    private List<Venta> listaVentasMaestra;
+
+    private String mesSeleccionado = "Anual";
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         chartVendedores.setAnimated(false);
-        chartRubros.setAnimated(false); // Opcional, pero recomendado
+        chartRubros.setAnimated(false);
         chartTiempo.setAnimated(false);
-        
-        // Opcional: Si el PieChart tiene etiquetas que se solapan, esto ayuda:
+
         chartRubros.setLabelsVisible(true);
+
+        javafx.scene.control.ToggleGroup grupo = btnNeto.getToggleGroup();
+
+        grupo.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal == null) {
+
+                oldVal.setSelected(true);
+            }
+        });
+
+        CategoryAxis ejeX = (CategoryAxis) chartVendedores.getXAxis();
+        ejeX.setTickLabelRotation(45);
+        ejeX.setAnimated(false);
+        chartVendedores.setLegendVisible(false);
+        chartTiempo.setLegendVisible(false);
+        chartRubros.setLegendVisible(false);
+
     }
 
     public void setVentas(List<Venta> ventas) {
+        this.listaVentasMaestra = ventas;
         this.listaVentas = ventas;
 
-        // Solo para verificar que llegaron bien:
-        System.out.println("-------------------------------------");
-        System.out.println("¡DASHBOARD LISTO!");
-        System.out.println("Recibí " + listaVentas.size() + " ventas para procesar.");
-        System.out.println("-------------------------------------");
+        cargarComboMeses();
 
         calcularKPIs();
         cargarGraficos();
     }
 
     private void calcularKPIs() {
-        // 1. Verificamos qué botón está apretado
+
         boolean verPorPlata = btnNeto.isSelected();
 
-        // 2. Variables para sumar
         int cantidad = listaVentas.size();
         double totalAcumulado = 0;
 
-        // 3. Sumamos según el modo elegido
         for (Venta v : listaVentas) {
             if (verPorPlata) {
                 totalAcumulado += v.getNeto();
@@ -105,141 +128,256 @@ public class DashboardController implements Initializable {
             }
         }
 
-        // 4. Calcular Promedio
         double promedio = (cantidad > 0) ? totalAcumulado / cantidad : 0;
 
-        // --- EL FORMATO VISUAL ---
-        // Aquí está el truco: cambiamos el "formateador" según el modo
         NumberFormat formato;
-        
+
         if (verPorPlata) {
-            // Modo Plata: Pone el signo $ y dos decimales ($ 1.500,00)
+
             formato = NumberFormat.getCurrencyInstance(new Locale("es", "AR"));
         } else {
-            // Modo Bultos: Solo números con separador de miles (1.500)
+
             formato = NumberFormat.getInstance(new Locale("es", "AR"));
-            formato.setMaximumFractionDigits(1); // Opcional: mostrar 1 decimal si los bultos no son enteros
+            formato.setMaximumFractionDigits(1);
         }
 
-        // 5. Mostrar en pantalla
         lblCantVentas.setText(String.valueOf(cantidad));
-        
-        // Usamos el formato dinámico que elegimos arriba
+
         lblTotalFacturado.setText(formato.format(totalAcumulado));
         lblTicketPromedio.setText(formato.format(promedio));
     }
 
     private void cargarGraficos() {
-        // Limpieza inicial
-        chartVendedores.getData().clear();
-        chartRubros.getData().clear();
-        chartTiempo.getData().clear();
-        
-        // 1. VERIFICAR MODO
-        // ¿Está seleccionado el botón de Neto?
+
+        CategoryAxis ejeX = (CategoryAxis) chartVendedores.getXAxis();
+        ejeX.getCategories().clear();
+
         boolean verPorPlata = btnNeto.isSelected();
-        
-        // Ajustamos los títulos de los gráficos para que el usuario sepa qué ve
+
         chartVendedores.setTitle(verPorPlata ? "Ranking Vendedores ($)" : "Ranking Vendedores (Bultos)");
         chartTiempo.setTitle(verPorPlata ? "Evolución Mensual ($)" : "Evolución Mensual (Bultos)");
 
-        // 2. PREPARAR CUBETAS
         Map<String, Double> porVendedor = new HashMap<>();
-        Map<String, Double> porRubro = new HashMap<>();
-        Map<String, Double> porMes = new TreeMap<>(); 
+        Map<String, Double> porProveedor = new HashMap<>();
+        Map<String, Double> porMes = new TreeMap<>();
 
-        // 3. LLENAR CUBETAS (Con lógica dinámica)
         for (Venta v : listaVentas) {
-            // --- DECISIÓN CLAVE ---
-            // Si verPorPlata es true, usamos getNeto(). Si no, usamos getBultos().
             double valorAUsar = verPorPlata ? v.getNeto() : v.getBultos();
-            // ----------------------
 
-            // Ahora usamos 'valorAUsar' en lugar de v.getNeto()
             porVendedor.merge(v.getVendedor().getNombre(), valorAUsar, Double::sum);
-            porRubro.merge(v.getArticulo().getRubro(), valorAUsar, Double::sum);
+
+            String proveedor = v.getArticulo().getProveedor();
+
+            if (proveedor == null || proveedor.isEmpty()) {
+                proveedor = "SIN PROVEEDOR";
+            }
+
+            porProveedor.merge(proveedor, valorAUsar, Double::sum);
+
             porMes.merge(v.getAnioMes(), valorAUsar, Double::sum);
         }
 
-        // 4. DIBUJAR (Esto queda casi igual, solo cambié los nombres de las series)
-        
-        // --- Vendedores ---
         XYChart.Series<String, Number> serieVend = new XYChart.Series<>();
         serieVend.setName(verPorPlata ? "Facturación" : "Bultos");
-        for (Map.Entry<String, Double> entry : porVendedor.entrySet()) {
+
+        List<Map.Entry<String, Double>> listaOrdenada = new ArrayList<>(porVendedor.entrySet());
+
+        listaOrdenada.sort((entrada1, entrada2) -> entrada2.getValue().compareTo(entrada1.getValue()));
+
+        // if (listaOrdenada.size() > 10) {
+        //    listaOrdenada = listaOrdenada.subList(0, 10);
+        // }
+        for (Map.Entry<String, Double> entry : listaOrdenada) {
             serieVend.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
         }
+
+        chartVendedores.getData().clear();
         chartVendedores.getData().add(serieVend);
 
-        // --- Rubros ---
+        Platform.runLater(() -> {
+            for (XYChart.Data<String, Number> d : serieVend.getData()) {
+                if (d.getNode() == null) {
+                    continue;
+                }
+
+                String textoValor;
+                if (verPorPlata) {
+                    textoValor = "$ " + String.format("%,.2f", d.getYValue().doubleValue());
+                } else {
+                    textoValor = String.format("%,.0f Bultos", d.getYValue().doubleValue());
+                }
+
+                String mensaje = String.format("Vendedor: %s\nTotal: %s", d.getXValue(), textoValor);
+
+                Tooltip tool = new Tooltip(mensaje);
+                tool.setShowDelay(Duration.millis(0));
+                tool.setStyle("-fx-font-size: 14px; -fx-background-color: #333333; -fx-text-fill: white;");
+                Tooltip.install(d.getNode(), tool);
+
+                String estiloOriginal = d.getNode().getStyle();
+
+                d.getNode().setOnMouseEntered(e -> {
+
+                    d.getNode().setStyle(estiloOriginal + "; -fx-opacity: 0.7; -fx-cursor: hand;");
+                });
+
+                d.getNode().setOnMouseExited(e -> {
+
+                    d.getNode().setStyle(estiloOriginal + "; -fx-opacity: 1.0; -fx-cursor: default;");
+                });
+            }
+        });
+
         javafx.collections.ObservableList<PieChart.Data> datosTorta = javafx.collections.FXCollections.observableArrayList();
-        for (Map.Entry<String, Double> entry : porRubro.entrySet()) {
+
+        for (Map.Entry<String, Double> entry : porProveedor.entrySet()) {
             datosTorta.add(new PieChart.Data(entry.getKey(), entry.getValue()));
         }
-        chartRubros.setData(datosTorta);
 
-        // --- COPIA DESDE AQUÍ ---
-        
-        // Usamos runLater para esperar a que los gráficos se dibujen antes de poner las etiquetas
+        chartRubros.getData().clear();
+        chartRubros.setData(datosTorta);
+        chartRubros.setTitle(verPorPlata ? "Facturación por Proveedor" : "Volumen por Proveedor");
+
         Platform.runLater(() -> {
-            
-            // 1. Calculamos el total de la torta actual
+
             double totalTorta = 0;
             for (PieChart.Data d : chartRubros.getData()) {
                 totalTorta += d.getPieValue();
             }
 
-            // 2. Recorremos cada porción
             for (PieChart.Data data : chartRubros.getData()) {
-                
-                // Si la porción no existe visualmente, la saltamos
-                if (data.getNode() == null) continue;
+                if (data.getNode() == null) {
+                    continue;
+                }
 
-                // Calculamos porcentaje
                 double porcentaje = (data.getPieValue() / totalTorta) * 100;
-                
-                // Texto del Tooltip
-                String textoTooltip = String.format("%s\nValor: %s\nRepresenta: %.1f%%", 
-                        data.getName(), 
-                        (verPorPlata ? "$ " : "") + String.format("%.0f", data.getPieValue()), 
+
+                String textoValor;
+                if (verPorPlata) {
+                    textoValor = NumberFormat.getCurrencyInstance(new Locale("es", "AR")).format(data.getPieValue());
+                } else {
+
+                    NumberFormat formatoBultos = NumberFormat.getInstance(new Locale("es", "AR"));
+                    formatoBultos.setMaximumFractionDigits(0);
+                    textoValor = formatoBultos.format(data.getPieValue());
+                }
+
+                String textoTooltip = String.format("%s\nValor: %s\nRepresenta: %.1f%%",
+                        data.getName(),
+                        textoValor,
                         porcentaje);
 
-                // 3. Instalamos el Tooltip instantáneo
                 Tooltip tool = new Tooltip(textoTooltip);
-                tool.setShowDelay(Duration.millis(0)); // <--- CLAVE: Retardo cero
+                tool.setShowDelay(Duration.millis(0));
                 tool.setStyle("-fx-font-size: 14px; -fx-background-color: #333333; -fx-text-fill: white;");
                 Tooltip.install(data.getNode(), tool);
 
-                // 4. Efecto de Zoom seguro
                 data.getNode().setOnMouseEntered(e -> {
                     data.getNode().setScaleX(1.1);
                     data.getNode().setScaleY(1.1);
                 });
-
                 data.getNode().setOnMouseExited(e -> {
                     data.getNode().setScaleX(1.0);
                     data.getNode().setScaleY(1.0);
                 });
             }
         });
-        
-        // --- Tiempo ---
+
         XYChart.Series<String, Number> serieTiempo = new XYChart.Series<>();
         serieTiempo.setName(verPorPlata ? "Tendencia $" : "Tendencia Vol.");
         for (Map.Entry<String, Double> entry : porMes.entrySet()) {
             serieTiempo.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
         }
+        chartTiempo.getData().clear();
         chartTiempo.getData().add(serieTiempo);
+
+        Platform.runLater(() -> {
+            for (XYChart.Data<String, Number> d : serieTiempo.getData()) {
+
+                if (d.getNode() == null) {
+                    continue;
+                }
+
+                String textoValor;
+                if (verPorPlata) {
+                    textoValor = NumberFormat.getCurrencyInstance(new Locale("es", "AR")).format(d.getYValue());
+                } else {
+                    textoValor = String.format("%,.0f Unidades", d.getYValue().doubleValue());
+                }
+
+                String mensaje = String.format("Periodo: %s\nTotal: %s", d.getXValue(), textoValor);
+
+                Tooltip tool = new Tooltip(mensaje);
+                tool.setShowDelay(Duration.millis(0));
+                tool.setStyle("-fx-font-size: 14px; -fx-background-color: #333333; -fx-text-fill: white;");
+                Tooltip.install(d.getNode(), tool);
+
+                d.getNode().setOnMouseEntered(e -> {
+                    d.getNode().setScaleX(1.5);
+                    d.getNode().setScaleY(1.5);
+                    d.getNode().setStyle("-fx-cursor: hand;");
+                });
+
+                d.getNode().setOnMouseExited(e -> {
+                    d.getNode().setScaleX(1.0);
+                    d.getNode().setScaleY(1.0);
+                    d.getNode().setStyle("-fx-cursor: default;");
+                });
+            }
+        });
     }
-    
+
     @FXML
     private void cambiarVisualizacion(javafx.event.ActionEvent event) {
-        // Simplemente recargamos los gráficos. 
-        // El método cargarGraficos() se encargará de ver qué botón está activo.
+
         if (listaVentas != null) {
             cargarGraficos();
             calcularKPIs();
         }
+    }
+
+    private void cargarComboMeses() {
+
+        Set<String> mesesUnicos = new HashSet<>();
+        for (Venta v : listaVentasMaestra) {
+            mesesUnicos.add(v.getAnioMes());
+        }
+
+        List<String> listaMeses = new ArrayList<>(mesesUnicos);
+        Collections.sort(listaMeses);
+
+        listaMeses.add(0, "Anual");
+
+        cmbMeses.getItems().clear();
+        cmbMeses.getItems().addAll(listaMeses);
+
+        cmbMeses.getSelectionModel().select("Anual");
+    }
+
+    @FXML
+    private void filtrarPorMes(ActionEvent event) {
+        String seleccion = cmbMeses.getSelectionModel().getSelectedItem();
+
+        if (seleccion == null) {
+            return;
+        }
+
+        this.mesSeleccionado = seleccion;
+
+        if (seleccion.equals("Anual")) {
+
+            this.listaVentas = new ArrayList<>(listaVentasMaestra);
+        } else {
+
+            this.listaVentas = new ArrayList<>();
+            for (Venta v : listaVentasMaestra) {
+                if (v.getAnioMes().equals(seleccion)) {
+                    this.listaVentas.add(v);
+                }
+            }
+        }
+        calcularKPIs();
+        cargarGraficos();
     }
 
 }

@@ -75,16 +75,15 @@ public class StartController implements Initializable {
                 DashboardController controller = loader.getController();
 
                 controller.setVentas(misVentas);
-                
+
                 Scene scene = new Scene(root);
                 Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
-                
+
                 stage.setMaximized(true);
                 stage.setX(screenBounds.getMinX());
                 stage.setY(screenBounds.getMinY());
                 stage.setWidth(screenBounds.getWidth());
                 stage.setHeight(screenBounds.getHeight());
-                
 
                 stage.setScene(scene);
                 stage.show();
