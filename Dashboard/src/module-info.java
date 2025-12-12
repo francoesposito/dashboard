@@ -15,14 +15,12 @@ module Dashboard {
     requires java.base;
     
     
-    // 2. ABRIMOS los paquetes a JavaFX. 
-    // Esto es CRÍTICO: permite que el FXML "inyecte" datos en tu código.
+
     opens dashboard to javafx.fxml;
     opens controllers to javafx.fxml;
     
-    // (Opcional por ahora) Si usas tablas más adelante, necesitarás abrir 'models'
+
     opens models to javafx.base;
 
-    // 3. Exportamos el paquete principal para que la App pueda arrancar
     exports dashboard;
 }

@@ -31,6 +31,15 @@ import java.util.HashSet;
 import java.util.Collections;
 import javafx.event.ActionEvent;
 import javafx.scene.chart.CategoryAxis;
+import javafx.scene.image.WritableImage;
+import javafx.embed.swing.SwingFXUtils;
+import javax.imageio.ImageIO;
+import javafx.stage.FileChooser;
+import java.io.File;
+import java.io.IOException;
+import javafx.scene.Node;
+import javafx.scene.SnapshotParameters;
+import javafx.scene.control.Button;
 
 /**
  * FXML Controller class
@@ -68,6 +77,8 @@ public class DashboardController implements Initializable {
 
     @FXML
     private ComboBox<String> cmbMeses;
+
+    private Button btnExportar;
 
     private List<Venta> listaVentas;
 
@@ -378,6 +389,33 @@ public class DashboardController implements Initializable {
         }
         calcularKPIs();
         cargarGraficos();
+    }
+
+    @FXML
+    private void exportarPantalla(ActionEvent event) {
+        Node nodoRaiz = ((Node) event.getSource()).getScene().getRoot();
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Guardar Reporte");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Imagen PNG", "*.png"));
+        fileChooser.setInitialFileName("Reporte_Ventas_" + mesSeleccionado.replace("/", "-") + ".png");
+
+        File archivoDestino = fileChooser.showSaveDialog(nodoRaiz.getScene().getWindow());
+
+        if (archivoDestino != null) {
+            try {
+
+                WritableImage foto = nodoRaiz.snapshot(new SnapshotParameters(), null);
+
+                ImageIO.write(SwingFXUtils.fromFXImage(foto, null), "png", archivoDestino);
+
+                System.out.println("Imagen guardada exitosamente.");
+
+            } catch (IOException ex) {
+
+                System.out.println("Error: " + ex.getMessage());
+            }
+        }
     }
 
 }
