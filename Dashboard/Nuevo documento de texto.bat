@@ -1,0 +1,1 @@
+jpackage --input dist --name "DashboardVentas" --main-jar "Dashboard.jar" --main-class "dashboard.Launcher" --type exe --module-path "C:\Users\Usuario\Desktop\JavaFX\javafx-sdk-21.0.9\lib" --add-modules java.base,java.desktop,jdk.unsupported,javafx.controls,javafx.fxml,javafx.graphics,javafx.swing --win-dir-chooser --win-menu --win-shortcut
