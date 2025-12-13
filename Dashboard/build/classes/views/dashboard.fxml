@@ -12,6 +12,7 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.effect.Bloom?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
@@ -22,78 +23,44 @@
 
 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="720.0" prefWidth="1280.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.DashboardController">
    <top>
-      <HBox alignment="CENTER" prefHeight="142.0" prefWidth="1280.0" BorderPane.alignment="CENTER">
+      <HBox alignment="CENTER" prefHeight="7.0" prefWidth="1260.0" spacing="150.0" BorderPane.alignment="CENTER">
          <children>
-            <VBox alignment="TOP_CENTER" prefHeight="102.0" prefWidth="387.0" spacing="10.0" style="-fx-background-color: cyan;" HBox.hgrow="ALWAYS">
-               <opaqueInsets>
-                  <Insets />
-               </opaqueInsets>
+            <ToggleButton fx:id="btnNeto" mnemonicParsing="false" onAction="#cambiarVisualizacion" prefHeight="35.0" prefWidth="140.0" selected="true" text="Ver facturación ($)">
+               <toggleGroup>
+                  <ToggleGroup fx:id="grupoVistas" />
+               </toggleGroup>
+               <effect>
+                  <Bloom threshold="0.91" />
+               </effect>
+            </ToggleButton>
+            <ToggleButton fx:id="btnBultos" mnemonicParsing="false" onAction="#cambiarVisualizacion" prefHeight="41.0" prefWidth="140.0" text="Ver bultos (unidades)" toggleGroup="$grupoVistas">
+               <effect>
+                  <Bloom threshold="0.91" />
+               </effect>
+            </ToggleButton>
+            <ComboBox fx:id="cmbMeses" onAction="#filtrarPorMes" prefHeight="68.0" prefWidth="140.0">
                <padding>
-                  <Insets top="50.0" />
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                </padding>
-               <HBox.margin>
-                  <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-               </HBox.margin>
-               <children>
-                  <Label alignment="TOP_CENTER" text="ENTRADAS">
-                     <font>
-                        <Font size="29.0" />
-                     </font>
-                  </Label>
-                  <Label fx:id="lblCantVentas" alignment="TOP_CENTER" text="0">
-                     <font>
-                        <Font size="24.0" />
-                     </font>
-                  </Label>
-               </children>
-            </VBox>
-            <VBox alignment="CENTER" prefHeight="102.0" prefWidth="383.0" spacing="10.0" style="-fx-background-color: cyan;" HBox.hgrow="ALWAYS">
-               <opaqueInsets>
-                  <Insets />
-               </opaqueInsets>
+               <effect>
+                  <Bloom threshold="0.91" />
+               </effect>
+            </ComboBox>
+            <Button fx:id="btnExportar" mnemonicParsing="false" onAction="#exportarPantalla" prefHeight="35.0" prefWidth="140.0" text="Exportar">
                <padding>
-                  <Insets top="50.0" />
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                </padding>
-               <HBox.margin>
-                  <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-               </HBox.margin>
-               <children>
-                  <Label fx:id="lblTituloTotal" text="TOTAL FACTURADO">
-                     <font>
-                        <Font size="29.0" />
-                     </font>
-                  </Label>
-                  <Label fx:id="lblTotalFacturado" text="0">
-                     <font>
-                        <Font size="24.0" />
-                     </font>
-                  </Label>
-               </children>
-            </VBox>
-            <VBox alignment="CENTER" prefHeight="102.0" prefWidth="383.0" spacing="10.0" style="-fx-background-color: cyan;" HBox.hgrow="ALWAYS">
-               <opaqueInsets>
-                  <Insets />
-               </opaqueInsets>
-               <padding>
-                  <Insets top="50.0" />
-               </padding>
-               <HBox.margin>
-                  <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-               </HBox.margin>
-               <children>
-                  <Label text="TICKET PROMEDIO">
-                     <font>
-                        <Font size="29.0" />
-                     </font>
-                  </Label>
-                  <Label fx:id="lblTicketPromedio" text="0">
-                     <font>
-                        <Font size="24.0" />
-                     </font>
-                  </Label>
-               </children>
-            </VBox>
+               <effect>
+                  <Bloom threshold="0.91" />
+               </effect>
+            </Button>
          </children>
+         <BorderPane.margin>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+         </BorderPane.margin>
+         <padding>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+         </padding>
       </HBox>
    </top>
    <center>
@@ -117,7 +84,7 @@
                       <NumberAxis side="LEFT" />
                     </yAxis>
                   </BarChart>
-                  <PieChart fx:id="chartRubros" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.vgrow="ALWAYS" />
+                  <PieChart fx:id="chartRubros" labelsVisible="false" legendVisible="false" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.vgrow="ALWAYS" />
                   <LineChart fx:id="chartTiempo" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1" GridPane.vgrow="ALWAYS">
                     <xAxis>
                       <CategoryAxis side="BOTTOM" />
@@ -126,7 +93,7 @@
                       <NumberAxis side="LEFT" />
                     </yAxis>
                   </LineChart>
-                  <VBox alignment="CENTER" prefHeight="250.0" prefWidth="500.0" spacing="40.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                  <VBox alignment="CENTER" fillWidth="false" spacing="30.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
                      <padding>
                         <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                      </padding>
@@ -134,28 +101,46 @@
                         <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                      </GridPane.margin>
                      <children>
-                        <ToggleButton fx:id="btnNeto" mnemonicParsing="false" onAction="#cambiarVisualizacion" selected="true" text="Ver facturación ($)">
-                           <toggleGroup>
-                              <ToggleGroup fx:id="grupoVistas" />
-                           </toggleGroup>
-                        </ToggleButton>
-                        <ToggleButton fx:id="btnBultos" mnemonicParsing="false" onAction="#cambiarVisualizacion" text="Ver bultos (unidades)" toggleGroup="$grupoVistas" />
-                        <ComboBox fx:id="cmbMeses" onAction="#filtrarPorMes" prefHeight="35.0" prefWidth="127.0">
-                           <VBox.margin>
-                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                           </VBox.margin>
+                        <VBox alignment="CENTER" fillWidth="false" prefHeight="108.0" prefWidth="414.0" spacing="10.0" style="-fx-background-color: yellow; -fx-border-color: black; -fx-border-width: 3;">
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
                            <padding>
-                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                              <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                            </padding>
-                        </ComboBox>
-                        <Button fx:id="btnExportar" mnemonicParsing="false" onAction="#exportarPantalla" prefHeight="50.0" prefWidth="133.0" text="Exportar">
-                           <VBox.margin>
-                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                           </VBox.margin>
+                           <children>
+                              <Label fx:id="lblTituloTotal" text="TOTAL FACTURADO">
+                                 <font>
+                                    <Font size="29.0" />
+                                 </font>
+                              </Label>
+                              <Label fx:id="lblTotalFacturado" text="0">
+                                 <font>
+                                    <Font size="24.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </VBox>
+                        <VBox alignment="CENTER" fillWidth="false" prefHeight="108.0" prefWidth="414.0" spacing="10.0" style="-fx-background-color: yellow; -fx-border-color: black; -fx-border-width: 3;">
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
                            <padding>
-                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                              <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                            </padding>
-                        </Button>
+                           <children>
+                              <Label text="TICKET PROMEDIO">
+                                 <font>
+                                    <Font size="29.0" />
+                                 </font>
+                              </Label>
+                              <Label fx:id="lblTicketPromedio" text="0">
+                                 <font>
+                                    <Font size="24.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </VBox>
                      </children>
                   </VBox>
                </children>

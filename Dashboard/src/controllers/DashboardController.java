@@ -37,6 +37,9 @@ import javax.imageio.ImageIO;
 import javafx.stage.FileChooser;
 import java.io.File;
 import java.io.IOException;
+import java.util.Comparator;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.control.Button;
@@ -47,9 +50,6 @@ import javafx.scene.control.Button;
  * @author Franco
  */
 public class DashboardController implements Initializable {
-
-    @FXML
-    private Label lblCantVentas;
 
     @FXML
     private Label lblTotalFacturado;
@@ -91,7 +91,6 @@ public class DashboardController implements Initializable {
         chartVendedores.setAnimated(false);
         chartRubros.setAnimated(false);
         chartTiempo.setAnimated(false);
-
         chartRubros.setLabelsVisible(true);
 
         javafx.scene.control.ToggleGroup grupo = btnNeto.getToggleGroup();
@@ -104,11 +103,12 @@ public class DashboardController implements Initializable {
         });
 
         CategoryAxis ejeX = (CategoryAxis) chartVendedores.getXAxis();
-        ejeX.setTickLabelRotation(45);
+        ejeX.setTickLabelRotation(90);
         ejeX.setAnimated(false);
         chartVendedores.setLegendVisible(false);
         chartTiempo.setLegendVisible(false);
         chartRubros.setLegendVisible(false);
+        chartRubros.setLabelsVisible(false);
 
     }
 
@@ -152,16 +152,11 @@ public class DashboardController implements Initializable {
             formato.setMaximumFractionDigits(1);
         }
 
-        lblCantVentas.setText(String.valueOf(cantidad));
-
         lblTotalFacturado.setText(formato.format(totalAcumulado));
         lblTicketPromedio.setText(formato.format(promedio));
     }
 
     private void cargarGraficos() {
-
-        CategoryAxis ejeX = (CategoryAxis) chartVendedores.getXAxis();
-        ejeX.getCategories().clear();
 
         boolean verPorPlata = btnNeto.isSelected();
 
@@ -203,7 +198,18 @@ public class DashboardController implements Initializable {
         }
 
         chartVendedores.getData().clear();
+
+        CategoryAxis ejeX = (CategoryAxis) chartVendedores.getXAxis();
+
+        ObservableList<String> categoriasOrdenadas = FXCollections.observableArrayList();
+        for (XYChart.Data<String, Number> dato : serieVend.getData()) {
+            categoriasOrdenadas.add(dato.getXValue());
+        }
+
+        ejeX.setCategories(categoriasOrdenadas);
+
         chartVendedores.getData().add(serieVend);
+        ordenarGrafico(serieVend);
 
         Platform.runLater(() -> {
             for (XYChart.Data<String, Number> d : serieVend.getData()) {
@@ -237,6 +243,7 @@ public class DashboardController implements Initializable {
                     d.getNode().setStyle(estiloOriginal + "; -fx-opacity: 1.0; -fx-cursor: default;");
                 });
             }
+
         });
 
         javafx.collections.ObservableList<PieChart.Data> datosTorta = javafx.collections.FXCollections.observableArrayList();
@@ -405,17 +412,30 @@ public class DashboardController implements Initializable {
         if (archivoDestino != null) {
             try {
 
+                chartRubros.setLabelsVisible(true);
+
+                chartRubros.layout();
+
                 WritableImage foto = nodoRaiz.snapshot(new SnapshotParameters(), null);
+
+                chartRubros.setLabelsVisible(false);
 
                 ImageIO.write(SwingFXUtils.fromFXImage(foto, null), "png", archivoDestino);
 
-                System.out.println("Imagen guardada exitosamente.");
-
             } catch (IOException ex) {
 
+                chartRubros.setLabelsVisible(false);
                 System.out.println("Error: " + ex.getMessage());
             }
         }
     }
 
+    private void ordenarGrafico(XYChart.Series<String, Number> series) {
+
+        Comparator<XYChart.Data<String, Number>> comparador = (a, b)
+                -> Double.compare(b.getYValue().doubleValue(), a.getYValue().doubleValue());
+
+        FXCollections.sort(series.getData(), comparador);
+
+    }
 }

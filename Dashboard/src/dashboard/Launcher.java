@@ -4,15 +4,10 @@
  */
 package dashboard;
 
-/**
- * package dashboard; // (Asegúrate que coincida con tu paquete)
- *
- * @author Franco
- */
 public class Launcher {
 
     public static void main(String[] args) {
-     
+
         Dashboard.main(args);
     }
 }
