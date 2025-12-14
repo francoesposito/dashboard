@@ -14,13 +14,13 @@ public class Dashboard extends Application {
 
     public void start(Stage stage) throws Exception {
 
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/start.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/login.fxml"));
 
         Parent root = loader.load();
 
         stage.setScene(new Scene(root));
 
-        stage.setTitle("Dashboard");
+        stage.setTitle("Login");
 
         stage.show();
 

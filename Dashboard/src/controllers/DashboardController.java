@@ -43,6 +43,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.control.Button;
+import models.Usuario;
 
 /**
  * FXML Controller class
@@ -84,6 +85,8 @@ public class DashboardController implements Initializable {
 
     private List<Venta> listaVentasMaestra;
 
+    private Usuario usuarioActual;
+
     private String mesSeleccionado = "Anual";
 
     @Override
@@ -112,14 +115,20 @@ public class DashboardController implements Initializable {
 
     }
 
+    public void setUsuario(Usuario usuario) {
+        this.usuarioActual = usuario;
+
+        if (listaVentasMaestra != null && !listaVentasMaestra.isEmpty()) {
+            aplicarFiltrosGlobales();
+        }
+    }
+
     public void setVentas(List<Venta> ventas) {
         this.listaVentasMaestra = ventas;
-        this.listaVentas = ventas;
 
         cargarComboMeses();
 
-        calcularKPIs();
-        cargarGraficos();
+        aplicarFiltrosGlobales();
     }
 
     private void calcularKPIs() {
@@ -375,27 +384,14 @@ public class DashboardController implements Initializable {
     @FXML
     private void filtrarPorMes(ActionEvent event) {
         String seleccion = cmbMeses.getSelectionModel().getSelectedItem();
-
         if (seleccion == null) {
             return;
         }
 
         this.mesSeleccionado = seleccion;
 
-        if (seleccion.equals("Anual")) {
-
-            this.listaVentas = new ArrayList<>(listaVentasMaestra);
-        } else {
-
-            this.listaVentas = new ArrayList<>();
-            for (Venta v : listaVentasMaestra) {
-                if (v.getAnioMes().equals(seleccion)) {
-                    this.listaVentas.add(v);
-                }
-            }
-        }
-        calcularKPIs();
-        cargarGraficos();
+        // Llamamos al método que sabe combinar Mes + Usuario
+        aplicarFiltrosGlobales();
     }
 
     @FXML
@@ -437,5 +433,50 @@ public class DashboardController implements Initializable {
 
         FXCollections.sort(series.getData(), comparador);
 
+    }
+
+    private void aplicarFiltrosGlobales() {
+
+        if (listaVentasMaestra == null || usuarioActual == null) {
+            listaVentas = new ArrayList<>(); // Lista vacía
+            cargarGraficos();
+            calcularKPIs();
+            return;
+        }
+
+        this.listaVentas = new ArrayList<>();
+
+        for (Venta v : listaVentasMaestra) {
+
+            boolean pasaFiltroMes = false;
+            if (mesSeleccionado.equals("Anual")) {
+                pasaFiltroMes = true;
+            } else if (v.getAnioMes().equals(mesSeleccionado)) {
+                pasaFiltroMes = true;
+            }
+
+            boolean pasaFiltroUsuario = false;
+
+            if (usuarioActual.esAdmin()) {
+
+                pasaFiltroUsuario = true;
+            } else {
+
+                String vendedorVenta = v.getVendedor().getNombre();
+                String miCodigo = usuarioActual.getCodigoVendedor();
+
+                if (vendedorVenta != null && miCodigo != null
+                        && vendedorVenta.trim().equalsIgnoreCase(miCodigo.trim())) {
+                    pasaFiltroUsuario = true;
+                }
+            }
+
+            if (pasaFiltroMes && pasaFiltroUsuario) {
+                this.listaVentas.add(v);
+            }
+        }
+
+        calcularKPIs();
+        cargarGraficos();
     }
 }

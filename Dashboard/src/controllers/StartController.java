@@ -21,6 +21,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.geometry.Rectangle2D;
+import models.Usuario;
 import models.Venta;
 import utils.dataload;
 
@@ -35,6 +36,8 @@ public class StartController implements Initializable {
 
     @FXML
     private Button btnCargar;
+
+    private Usuario usuarioActual;
 
     /**
      * Initializes the controller class.
@@ -76,6 +79,12 @@ public class StartController implements Initializable {
 
                 controller.setVentas(misVentas);
 
+                if (this.usuarioActual != null) {
+                    controller.setUsuario(this.usuarioActual);
+                } else {
+                    System.out.println("¡Cuidado! El usuarioActual es null en StartController.");
+                }
+
                 Scene scene = new Scene(root);
                 Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
 
@@ -86,6 +95,7 @@ public class StartController implements Initializable {
                 stage.setHeight(screenBounds.getHeight());
 
                 stage.setScene(scene);
+                stage.setTitle("Dashboard - " + usuarioActual.getNombreUsuario());
                 stage.show();
 
             } catch (IOException e) {
@@ -96,6 +106,12 @@ public class StartController implements Initializable {
         } else {
             System.out.println("El usuario canceló la selección.");
         }
+
+    }
+
+    public void setUsuario(Usuario usuario) {
+        this.usuarioActual = usuario;
+        System.out.println("StartController: Usuario recibido -> " + usuario.getNombreUsuario());
     }
 
 }
