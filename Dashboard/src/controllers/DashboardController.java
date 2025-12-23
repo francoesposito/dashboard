@@ -41,6 +41,7 @@ import java.util.Comparator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.control.Button;
 import models.Usuario;
@@ -169,93 +170,32 @@ public class DashboardController implements Initializable {
 
         boolean verPorPlata = btnNeto.isSelected();
 
-        chartVendedores.setTitle(verPorPlata ? "Ranking Vendedores ($)" : "Ranking Vendedores (Bultos)");
+        if (usuarioActual != null && usuarioActual.esAdmin()) {
+
+            cargarRankingVendedores(this.listaVentas);
+        } else {
+
+            cargarRankingClientes();
+        }
+
         chartTiempo.setTitle(verPorPlata ? "Evolución Mensual ($)" : "Evolución Mensual (Bultos)");
 
-        Map<String, Double> porVendedor = new HashMap<>();
         Map<String, Double> porProveedor = new HashMap<>();
         Map<String, Double> porMes = new TreeMap<>();
 
         for (Venta v : listaVentas) {
             double valorAUsar = verPorPlata ? v.getNeto() : v.getBultos();
 
-            porVendedor.merge(v.getVendedor().getNombre(), valorAUsar, Double::sum);
-
             String proveedor = v.getArticulo().getProveedor();
-
             if (proveedor == null || proveedor.isEmpty()) {
                 proveedor = "SIN PROVEEDOR";
             }
-
             porProveedor.merge(proveedor, valorAUsar, Double::sum);
 
             porMes.merge(v.getAnioMes(), valorAUsar, Double::sum);
         }
 
-        XYChart.Series<String, Number> serieVend = new XYChart.Series<>();
-        serieVend.setName(verPorPlata ? "Facturación" : "Bultos");
-
-        List<Map.Entry<String, Double>> listaOrdenada = new ArrayList<>(porVendedor.entrySet());
-
-        listaOrdenada.sort((entrada1, entrada2) -> entrada2.getValue().compareTo(entrada1.getValue()));
-
-        // if (listaOrdenada.size() > 10) {
-        //    listaOrdenada = listaOrdenada.subList(0, 10);
-        // }
-        for (Map.Entry<String, Double> entry : listaOrdenada) {
-            serieVend.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
-        }
-
-        chartVendedores.getData().clear();
-
-        CategoryAxis ejeX = (CategoryAxis) chartVendedores.getXAxis();
-
-        ObservableList<String> categoriasOrdenadas = FXCollections.observableArrayList();
-        for (XYChart.Data<String, Number> dato : serieVend.getData()) {
-            categoriasOrdenadas.add(dato.getXValue());
-        }
-
-        ejeX.setCategories(categoriasOrdenadas);
-
-        chartVendedores.getData().add(serieVend);
-        ordenarGrafico(serieVend);
-
-        Platform.runLater(() -> {
-            for (XYChart.Data<String, Number> d : serieVend.getData()) {
-                if (d.getNode() == null) {
-                    continue;
-                }
-
-                String textoValor;
-                if (verPorPlata) {
-                    textoValor = "$ " + String.format("%,.2f", d.getYValue().doubleValue());
-                } else {
-                    textoValor = String.format("%,.0f Bultos", d.getYValue().doubleValue());
-                }
-
-                String mensaje = String.format("Vendedor: %s\nTotal: %s", d.getXValue(), textoValor);
-
-                Tooltip tool = new Tooltip(mensaje);
-                tool.setShowDelay(Duration.millis(0));
-                tool.setStyle("-fx-font-size: 14px; -fx-background-color: #333333; -fx-text-fill: white;");
-                Tooltip.install(d.getNode(), tool);
-
-                String estiloOriginal = d.getNode().getStyle();
-
-                d.getNode().setOnMouseEntered(e -> {
-
-                    d.getNode().setStyle(estiloOriginal + "; -fx-opacity: 0.7; -fx-cursor: hand;");
-                });
-
-                d.getNode().setOnMouseExited(e -> {
-
-                    d.getNode().setStyle(estiloOriginal + "; -fx-opacity: 1.0; -fx-cursor: default;");
-                });
-            }
-
-        });
-
-        javafx.collections.ObservableList<PieChart.Data> datosTorta = javafx.collections.FXCollections.observableArrayList();
+        ObservableList<PieChart.Data> datosTorta = FXCollections.observableArrayList();
 
         for (Map.Entry<String, Double> entry : porProveedor.entrySet()) {
             datosTorta.add(new PieChart.Data(entry.getKey(), entry.getValue()));
@@ -263,11 +203,11 @@ public class DashboardController implements Initializable {
 
         chartRubros.getData().clear();
         chartRubros.setData(datosTorta);
+
         aplicarColoresConsistentes();
         chartRubros.setTitle(verPorPlata ? "Facturación por Proveedor" : "Volumen por Proveedor");
 
         Platform.runLater(() -> {
-
             double totalTorta = 0;
             for (PieChart.Data d : chartRubros.getData()) {
                 totalTorta += d.getPieValue();
@@ -284,16 +224,13 @@ public class DashboardController implements Initializable {
                 if (verPorPlata) {
                     textoValor = NumberFormat.getCurrencyInstance(new Locale("es", "AR")).format(data.getPieValue());
                 } else {
-
                     NumberFormat formatoBultos = NumberFormat.getInstance(new Locale("es", "AR"));
                     formatoBultos.setMaximumFractionDigits(0);
                     textoValor = formatoBultos.format(data.getPieValue());
                 }
 
                 String textoTooltip = String.format("%s\nValor: %s\nRepresenta: %.1f%%",
-                        data.getName(),
-                        textoValor,
-                        porcentaje);
+                        data.getName(), textoValor, porcentaje);
 
                 Tooltip tool = new Tooltip(textoTooltip);
                 tool.setShowDelay(Duration.millis(0));
@@ -313,15 +250,16 @@ public class DashboardController implements Initializable {
 
         XYChart.Series<String, Number> serieTiempo = new XYChart.Series<>();
         serieTiempo.setName(verPorPlata ? "Tendencia $" : "Tendencia Vol.");
+
         for (Map.Entry<String, Double> entry : porMes.entrySet()) {
             serieTiempo.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
         }
+
         chartTiempo.getData().clear();
         chartTiempo.getData().add(serieTiempo);
 
         Platform.runLater(() -> {
             for (XYChart.Data<String, Number> d : serieTiempo.getData()) {
-
                 if (d.getNode() == null) {
                     continue;
                 }
@@ -345,7 +283,6 @@ public class DashboardController implements Initializable {
                     d.getNode().setScaleY(1.5);
                     d.getNode().setStyle("-fx-cursor: hand;");
                 });
-
                 d.getNode().setOnMouseExited(e -> {
                     d.getNode().setScaleX(1.0);
                     d.getNode().setScaleY(1.0);
@@ -353,6 +290,66 @@ public class DashboardController implements Initializable {
                 });
             }
         });
+    }
+
+    private void cargarRankingVendedores(List<Venta> listaVentas) {
+        boolean verPorPlata = btnNeto.isSelected();
+        chartVendedores.setTitle(verPorPlata ? "Ranking Global Vendedores ($)" : "Ranking Global Vendedores (Bultos)");
+
+        Map<String, Double> mapRanking = new HashMap<>();
+
+        for (Venta v : listaVentas) {
+            double valor = verPorPlata ? v.getNeto() : v.getBultos();
+            mapRanking.merge(v.getVendedor().getNombre(), valor, Double::sum);
+        }
+
+        llenarGraficoBarras(mapRanking, verPorPlata, true);
+    }
+
+    private void cargarRankingClientes() {
+        boolean verPorPlata = btnNeto.isSelected();
+        chartVendedores.setTitle(verPorPlata ? "Mis Clientes ($)" : "Mis Clientes (Bultos)");
+
+        Map<String, Double> mapRanking = new HashMap<>();
+
+        for (Venta v : listaVentas) {
+            double valor = verPorPlata ? v.getNeto() : v.getBultos();
+            String cliente = v.getCliente().getNombre();
+            mapRanking.merge(cliente, valor, Double::sum);
+        }
+
+        llenarGraficoBarras(mapRanking, verPorPlata, false);
+    }
+
+    private void llenarGraficoBarras(Map<String, Double> mapaDatos, boolean verPorPlata, boolean mostrarNombres) {
+
+        chartVendedores.getData().clear();
+        chartVendedores.layout();
+
+        CategoryAxis ejeX = (CategoryAxis) chartVendedores.getXAxis();
+        ejeX.getCategories().clear();
+
+        ejeX.setTickLabelsVisible(mostrarNombres);
+        ejeX.setTickMarkVisible(mostrarNombres);
+
+        XYChart.Series<String, Number> serie = new XYChart.Series<>();
+        serie.setName("Ranking");
+
+        List<Map.Entry<String, Double>> listaOrdenada = new ArrayList<>(mapaDatos.entrySet());
+        listaOrdenada.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+
+        for (Map.Entry<String, Double> entry : listaOrdenada) {
+            serie.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+        }
+
+        ObservableList<String> categorias = FXCollections.observableArrayList();
+        for (XYChart.Data<String, Number> d : serie.getData()) {
+            categorias.add(d.getXValue());
+        }
+        ejeX.setCategories(categorias);
+
+        chartVendedores.getData().add(serie);
+        configurarTooltipsBarra(serie, verPorPlata);
     }
 
     @FXML
@@ -397,7 +394,8 @@ public class DashboardController implements Initializable {
 
     @FXML
     private void exportarPantalla(ActionEvent event) {
-        Node nodoRaiz = ((Node) event.getSource()).getScene().getRoot();
+
+        Parent nodoRaiz = ((Node) event.getSource()).getScene().getRoot();
 
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Guardar Reporte");
@@ -411,16 +409,25 @@ public class DashboardController implements Initializable {
 
                 chartRubros.setLabelsVisible(true);
 
+                boolean animacionOriginal = chartRubros.getAnimated();
+                chartRubros.setAnimated(false);
+
+                chartRubros.applyCss();
                 chartRubros.layout();
 
-                WritableImage foto = nodoRaiz.snapshot(new SnapshotParameters(), null);
+                double escala = javafx.stage.Screen.getPrimary().getOutputScaleX();
+
+                SnapshotParameters params = new SnapshotParameters();
+                params.setTransform(javafx.scene.transform.Transform.scale(escala, escala));
+
+                WritableImage foto = nodoRaiz.snapshot(params, null);
 
                 chartRubros.setLabelsVisible(false);
+                chartRubros.setAnimated(animacionOriginal);
 
                 ImageIO.write(SwingFXUtils.fromFXImage(foto, null), "png", archivoDestino);
 
             } catch (IOException ex) {
-
                 chartRubros.setLabelsVisible(false);
                 System.out.println("Error: " + ex.getMessage());
             }
@@ -480,10 +487,8 @@ public class DashboardController implements Initializable {
         calcularKPIs();
         cargarGraficos();
     }
-    
-    
-    // ACTUALIZAR ESTO SI SE AGREGA UN PROVEEDOR
 
+    // ACTUALIZAR ESTO SI SE AGREGA UN PROVEEDOR
     private void aplicarColoresConsistentes() {
 
         for (PieChart.Data data : chartRubros.getData()) {
@@ -493,10 +498,10 @@ public class DashboardController implements Initializable {
 
             switch (categoria) {
                 case "00039 - SIDEREUS S.R.L - ECOCHEP -":
-                    colorHex = "#E74C3C"; 
+                    colorHex = "#E74C3C";
                     break;
                 case "00046 - CEPAS ARGENTINAS S A":
-                    colorHex = "#3498DB"; 
+                    colorHex = "#3498DB";
                     break;
                 case "00016 - MOLINOS TRES ARROYOS S.A":
                     colorHex = "#2ECC71";
@@ -586,23 +591,23 @@ public class DashboardController implements Initializable {
                     colorHex = "#CD5C5C";
                     break;
                 case "00003 - QUIMICA ESTRELLA":
-                    colorHex = "#40E0D0"; 
+                    colorHex = "#40E0D0";
                     break;
                 case "00610 - GEORGALOS HERMANOS SAICA":
-                    colorHex = "#FF1493"; 
+                    colorHex = "#FF1493";
                     break;
                 case "00005 - AGROCOM S.A.C.I.I. Y F.":
-                    colorHex = "#228B22"; 
+                    colorHex = "#228B22";
                     break;
                 case "00660 - PIER DESCUENTOS":
-                    colorHex = "#8B4513"; 
+                    colorHex = "#8B4513";
                     break;
                 case "00598 - PARALLEL S.A.":
-                    colorHex = "#708090"; 
+                    colorHex = "#708090";
                     break;
 
                 default:
-                    colorHex = "#95A5A6"; 
+                    colorHex = "#95A5A6";
                     break;
             }
 
@@ -611,6 +616,39 @@ public class DashboardController implements Initializable {
             }
         }
 
+    }
+
+    private void configurarTooltipsBarra(XYChart.Series<String, Number> serie, boolean verPorPlata) {
+        Platform.runLater(() -> {
+            for (XYChart.Data<String, Number> d : serie.getData()) {
+                if (d.getNode() == null) {
+                    continue;
+                }
+
+                String textoValor;
+                if (verPorPlata) {
+                    textoValor = "$ " + String.format("%,.2f", d.getYValue().doubleValue());
+                } else {
+                    textoValor = String.format("%,.0f Bultos", d.getYValue().doubleValue());
+                }
+
+                String mensaje = String.format("%s\nTotal: %s", d.getXValue(), textoValor);
+
+                Tooltip tool = new Tooltip(mensaje);
+                tool.setShowDelay(Duration.millis(0));
+                tool.setStyle("-fx-font-size: 14px; -fx-background-color: #333333; -fx-text-fill: white;");
+                Tooltip.install(d.getNode(), tool);
+
+                String estiloOriginal = d.getNode().getStyle();
+
+                d.getNode().setOnMouseEntered(e -> {
+                    d.getNode().setStyle(estiloOriginal + "; -fx-opacity: 0.7; -fx-cursor: hand;");
+                });
+                d.getNode().setOnMouseExited(e -> {
+                    d.getNode().setStyle(estiloOriginal + "; -fx-opacity: 1.0; -fx-cursor: default;");
+                });
+            }
+        });
     }
 
 }
