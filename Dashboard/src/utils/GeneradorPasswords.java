@@ -10,6 +10,7 @@ import java.util.Random;
 
 public class GeneradorPasswords {
 
+    // ACTUALIZAR ESTO SI SE AGREGA UN NUEVO VENDEDOR
     private static final String[] VENDEDORES = {
         "DEVOTO, JUAN",
         "BIRD, SEBASTIAN",

@@ -263,6 +263,7 @@ public class DashboardController implements Initializable {
 
         chartRubros.getData().clear();
         chartRubros.setData(datosTorta);
+        aplicarColoresConsistentes();
         chartRubros.setTitle(verPorPlata ? "Facturación por Proveedor" : "Volumen por Proveedor");
 
         Platform.runLater(() -> {
@@ -479,4 +480,137 @@ public class DashboardController implements Initializable {
         calcularKPIs();
         cargarGraficos();
     }
+    
+    
+    // ACTUALIZAR ESTO SI SE AGREGA UN PROVEEDOR
+
+    private void aplicarColoresConsistentes() {
+
+        for (PieChart.Data data : chartRubros.getData()) {
+
+            String categoria = data.getName().toUpperCase();
+            String colorHex;
+
+            switch (categoria) {
+                case "00039 - SIDEREUS S.R.L - ECOCHEP -":
+                    colorHex = "#E74C3C"; 
+                    break;
+                case "00046 - CEPAS ARGENTINAS S A":
+                    colorHex = "#3498DB"; 
+                    break;
+                case "00016 - MOLINOS TRES ARROYOS S.A":
+                    colorHex = "#2ECC71";
+                    break;
+                case "NULL":
+                    colorHex = "#9B59B6";
+                    break;
+                case "00044 - DULZURAS EL SUR S.R.L.":
+                    colorHex = "#F1C40F";
+                    break;
+                case "00008 - PENAFLOR":
+                    colorHex = "#E67E22";
+                    break;
+                case "00051 - CEMIBA MEDIC.LAB.":
+                    colorHex = "#1ABC9C";
+                    break;
+                case "00035 - MOLINO CANUELAS S.A.":
+                    colorHex = "#34495E";
+                    break;
+                case "00614 - LLAVANERES SRL":
+                    colorHex = "#D35400";
+                    break;
+                case "00285 - YOUNG S.R.L.":
+                    colorHex = "#7F8C8D";
+                    break;
+                case "00656 - CASSINI Y CESARATTO":
+                    colorHex = "#C0392B";
+                    break;
+                case "00566 - DOS HERMANOS S.A.":
+                    colorHex = "#8E44AD";
+                    break;
+                case "00673 - DIA ARGENTINA S.A.":
+                    colorHex = "#2980B9";
+                    break;
+                case "00001 - UNILEVER - FOODS":
+                    colorHex = "#27AE60";
+                    break;
+                case "00602 - LEONCIO ARIZU SA":
+                    colorHex = "#16A085";
+                    break;
+                case "00002 - UNILEVER BPC - BEAUTY & PERSONAL CARE":
+                    colorHex = "#F39C12";
+                    break;
+                case "00635 - CONSULTORA UMAMI SRL":
+                    colorHex = "#FF00FF";
+                    break;
+                case "00617 - AGGGROUP SOLUCIONES TACTICAS SRL -PROFUGO-":
+                    colorHex = "#00FFFF";
+                    break;
+                case "00015 - UNILEVER HC - HOME CARE":
+                    colorHex = "#000080";
+                    break;
+                case "00591 - COSMOPOLITAN S.A.":
+                    colorHex = "#808000";
+                    break;
+                case "00695 - NECHO S A":
+                    colorHex = "#FFC0CB";
+                    break;
+                case "00593 - BODEGAS SALENTEIN SA":
+                    colorHex = "#FFD700";
+                    break;
+                case "00004 - ESTABLEC. LAS MARIAS S.A.":
+                    colorHex = "#4B0082";
+                    break;
+                case "00043 - AEROSOLES HECSPI SACIFI Y DE M Y S":
+                    colorHex = "#FF4500";
+                    break;
+                case "00045 - BODEGAS CUVILLIER S.A":
+                    colorHex = "#DA70D6";
+                    break;
+                case "00647 - BONAFIDE S.A.I Y C":
+                    colorHex = "#00CED1";
+                    break;
+                case "00691 - BUYANOR S.A.":
+                    colorHex = "#F08080";
+                    break;
+                case "00689 - DELLEPIANE SAN LUIS SA":
+                    colorHex = "#5F9EA0";
+                    break;
+                case "00693 - PILARES COMPA?IA ALIMENTICIA SA":
+                    colorHex = "#BDB76B";
+                    break;
+                case "00686 - SOFTYS ARGENTINA SA":
+                    colorHex = "#4682B4";
+                    break;
+                case "00661 - DASBURG S.A. - (SECCO) -":
+                    colorHex = "#CD5C5C";
+                    break;
+                case "00003 - QUIMICA ESTRELLA":
+                    colorHex = "#40E0D0"; 
+                    break;
+                case "00610 - GEORGALOS HERMANOS SAICA":
+                    colorHex = "#FF1493"; 
+                    break;
+                case "00005 - AGROCOM S.A.C.I.I. Y F.":
+                    colorHex = "#228B22"; 
+                    break;
+                case "00660 - PIER DESCUENTOS":
+                    colorHex = "#8B4513"; 
+                    break;
+                case "00598 - PARALLEL S.A.":
+                    colorHex = "#708090"; 
+                    break;
+
+                default:
+                    colorHex = "#95A5A6"; 
+                    break;
+            }
+
+            if (data.getNode() != null) {
+                data.getNode().setStyle("-fx-pie-color: " + colorHex + ";");
+            }
+        }
+
+    }
+
 }
