@@ -4,6 +4,7 @@
  */
 package controllers;
 
+import java.io.BufferedWriter;
 import java.net.URL;
 import java.text.NumberFormat;
 import java.util.HashMap;
@@ -36,14 +37,22 @@ import javafx.embed.swing.SwingFXUtils;
 import javax.imageio.ImageIO;
 import javafx.stage.FileChooser;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
-import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
+import javafx.scene.layout.Region;
+import javafx.scene.transform.Transform;
+import javafx.stage.Screen;
 import models.Usuario;
 
 /**
@@ -80,6 +89,7 @@ public class DashboardController implements Initializable {
     @FXML
     private ComboBox<String> cmbMeses;
 
+    @FXML
     private Button btnExportar;
 
     private List<Venta> listaVentas;
@@ -113,6 +123,27 @@ public class DashboardController implements Initializable {
         chartTiempo.setLegendVisible(false);
         chartRubros.setLegendVisible(false);
         chartRubros.setLabelsVisible(false);
+
+        // CONFIGURACIÓN DEL MENÚ DE EXPORTACIÓN
+        ContextMenu menuExportar = new ContextMenu();
+
+        MenuItem itemImagen = new MenuItem("Exportar Imagen (PNG)");
+        MenuItem itemDatos = new MenuItem("Exportar Datos (CSV)");
+
+        // Asignamos las acciones
+        itemImagen.setOnAction(e -> generarReporteImagen());
+        itemDatos.setOnAction(e -> exportarListadoCSV());    // Llamamos al nuevo método
+
+        menuExportar.getItems().addAll(itemImagen, itemDatos);
+
+        // Hacemos que el botón despliegue el menú al hacer Click
+        // Asumiendo que tu botón se llama btnExportar en el FXML
+        if (btnExportar != null) {
+            btnExportar.setOnAction(e -> {
+                // Muestra el menú justo debajo del botón
+                menuExportar.show(btnExportar, javafx.geometry.Side.BOTTOM, 0, 0);
+            });
+        }
 
     }
 
@@ -395,41 +426,94 @@ public class DashboardController implements Initializable {
     @FXML
     private void exportarPantalla(ActionEvent event) {
 
-        Parent nodoRaiz = ((Node) event.getSource()).getScene().getRoot();
+        ContextMenu menuExportar = new ContextMenu();
 
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Guardar Reporte");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Imagen PNG", "*.png"));
-        fileChooser.setInitialFileName("Reporte_Ventas_" + mesSeleccionado.replace("/", "-") + ".png");
+        MenuItem itemImagen = new MenuItem("Exportar Imagen (PNG)");
+        MenuItem itemDatos = new MenuItem("Exportar Datos (CSV)");
 
-        File archivoDestino = fileChooser.showSaveDialog(nodoRaiz.getScene().getWindow());
+        menuExportar.setStyle("-fx-font-size: 14px;");
 
-        if (archivoDestino != null) {
-            try {
+        itemImagen.setOnAction(e -> generarReporteImagen());
+        itemDatos.setOnAction(e -> exportarListadoCSV());
+
+        menuExportar.getItems().addAll(itemImagen, itemDatos);
+
+        Node source = (Node) event.getSource();
+        menuExportar.show(source, javafx.geometry.Side.BOTTOM, 0, 0);
+    }
+
+    private void generarReporteImagen() {
+        try {
+            if (chartRubros == null || chartRubros.getScene() == null) {
+                return;
+            }
+            Scene escena = chartRubros.getScene();
+
+            Region nodoRaiz = (Region) escena.getRoot();
+
+            double anchoReal = escena.getWidth();
+            double altoReal = escena.getHeight();
+
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Guardar Reporte Imagen");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Imagen PNG", "*.png"));
+            String nombreArchivo = "Reporte_Ventas_" + (mesSeleccionado != null ? mesSeleccionado.replace("/", "-") : "Anual") + ".png";
+            fileChooser.setInitialFileName(nombreArchivo);
+
+            File archivoDestino = fileChooser.showSaveDialog(escena.getWindow());
+
+            if (archivoDestino != null) {
+
+                nodoRaiz.setPrefSize(anchoReal, altoReal);
+                nodoRaiz.setMinSize(anchoReal, altoReal);
+                nodoRaiz.setMaxSize(anchoReal, altoReal);
 
                 chartRubros.setLabelsVisible(true);
-
                 boolean animacionOriginal = chartRubros.getAnimated();
                 chartRubros.setAnimated(false);
 
-                chartRubros.applyCss();
-                chartRubros.layout();
+                nodoRaiz.applyCss();
+                nodoRaiz.layout();
 
-                double escala = javafx.stage.Screen.getPrimary().getOutputScaleX();
+                double escala = 1.0;
+                try {
+                    escala = Screen.getPrimary().getOutputScaleX();
+                } catch (Exception e) {
+                    escala = 1.0;
+                }
 
                 SnapshotParameters params = new SnapshotParameters();
-                params.setTransform(javafx.scene.transform.Transform.scale(escala, escala));
+                params.setTransform(Transform.scale(escala, escala));
+                // Recortamos exactamente el tamaño de la ventana (sin bordes extra)
+                params.setViewport(new Rectangle2D(0, 0, anchoReal, altoReal));
 
                 WritableImage foto = nodoRaiz.snapshot(params, null);
 
                 chartRubros.setLabelsVisible(false);
                 chartRubros.setAnimated(animacionOriginal);
 
-                ImageIO.write(SwingFXUtils.fromFXImage(foto, null), "png", archivoDestino);
+                nodoRaiz.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+                nodoRaiz.setMinSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+                nodoRaiz.setMaxSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
 
-            } catch (IOException ex) {
+                nodoRaiz.layout();
+
+                ImageIO.write(SwingFXUtils.fromFXImage(foto, null), "png", archivoDestino);
+                System.out.println("Imagen exportada correctamente.");
+            }
+
+        } catch (Exception ex) {
+            System.out.println("ERROR CRÍTICO AL EXPORTAR IMAGEN:");
+            ex.printStackTrace();
+            // Restauración de emergencia
+            if (chartRubros != null) {
                 chartRubros.setLabelsVisible(false);
-                System.out.println("Error: " + ex.getMessage());
+            }
+
+            try {
+                Region r = (Region) chartRubros.getScene().getRoot();
+                r.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+            } catch (Exception e2) {
             }
         }
     }
@@ -446,7 +530,7 @@ public class DashboardController implements Initializable {
     private void aplicarFiltrosGlobales() {
 
         if (listaVentasMaestra == null || usuarioActual == null) {
-            listaVentas = new ArrayList<>(); // Lista vacía
+            listaVentas = new ArrayList<>();
             cargarGraficos();
             calcularKPIs();
             return;
@@ -649,6 +733,45 @@ public class DashboardController implements Initializable {
                 });
             }
         });
+    }
+
+    private void exportarListadoCSV() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Guardar Reporte CSV");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Archivo CSV", "*.csv"));
+        fileChooser.setInitialFileName("Datos_Ventas_" + mesSeleccionado.replace("/", "-") + ".csv");
+
+        File archivoDestino = fileChooser.showSaveDialog(chartVendedores.getScene().getWindow());
+
+        if (archivoDestino != null) {
+
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(archivoDestino, StandardCharsets.ISO_8859_1))) {
+
+                writer.write("sep=;\n");
+
+                writer.write("Fecha;Vendedor;Cliente;Proveedor;Articulo;Cantidad (Bultos);Total ($)\n");
+
+                for (Venta v : this.listaVentas) {
+
+                    String fecha = (v.getAnioMes() != null) ? v.getAnioMes() : "-";
+                    String vendedor = (v.getVendedor() != null) ? v.getVendedor().getNombre() : "S/D";
+                    String cliente = (v.getCliente() != null) ? v.getCliente().getNombre() : "S/D";
+                    String proveedor = (v.getArticulo() != null) ? v.getArticulo().getProveedor() : "S/D";
+                    String articulo = (v.getArticulo() != null) ? v.getArticulo().getDescripcion() : "Articulo genérico";
+
+                    String bultos = String.valueOf(v.getBultos()).replace(".", ",");
+                    String neto = String.format("%.2f", v.getNeto()).replace(".", ",");
+
+                    writer.write(String.format("%s;%s;%s;%s;%s;%s;%s\n",
+                            fecha, vendedor, cliente, proveedor, articulo, bultos, neto));
+                }
+
+                System.out.println("CSV exportado exitosamente.");
+
+            } catch (IOException ex) {
+                System.out.println("Error al exportar CSV: " + ex.getMessage());
+            }
+        }
     }
 
 }
