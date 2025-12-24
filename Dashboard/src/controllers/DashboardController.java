@@ -26,7 +26,6 @@ import models.Venta;
 import javafx.scene.control.Tooltip;
 import javafx.util.Duration;
 import java.util.ArrayList;
-import javafx.scene.control.ComboBox;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
@@ -48,8 +47,11 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.layout.Region;
 import javafx.scene.transform.Transform;
 import javafx.stage.Screen;
@@ -87,10 +89,13 @@ public class DashboardController implements Initializable {
     private Label lblTituloTotal;
 
     @FXML
-    private ComboBox<String> cmbMeses;
+    private MenuButton menuMeses;
 
     @FXML
     private Button btnExportar;
+
+    @FXML
+    private ToggleButton btnVerTodos;
 
     private List<Venta> listaVentas;
 
@@ -124,24 +129,30 @@ public class DashboardController implements Initializable {
         chartRubros.setLegendVisible(false);
         chartRubros.setLabelsVisible(false);
 
-        // CONFIGURACIÓN DEL MENÚ DE EXPORTACIÓN
         ContextMenu menuExportar = new ContextMenu();
 
         MenuItem itemImagen = new MenuItem("Exportar Imagen (PNG)");
         MenuItem itemDatos = new MenuItem("Exportar Datos (CSV)");
 
-        // Asignamos las acciones
         itemImagen.setOnAction(e -> generarReporteImagen());
-        itemDatos.setOnAction(e -> exportarListadoCSV());    // Llamamos al nuevo método
+        itemDatos.setOnAction(e -> exportarListadoCSV());
 
         menuExportar.getItems().addAll(itemImagen, itemDatos);
 
-        // Hacemos que el botón despliegue el menú al hacer Click
-        // Asumiendo que tu botón se llama btnExportar en el FXML
         if (btnExportar != null) {
             btnExportar.setOnAction(e -> {
-                // Muestra el menú justo debajo del botón
+
                 menuExportar.show(btnExportar, javafx.geometry.Side.BOTTOM, 0, 0);
+            });
+        }
+
+        if (btnVerTodos != null) {
+            btnVerTodos.selectedProperty().addListener((obs, oldVal, newVal) -> {
+
+                if (usuarioActual != null) {
+
+                    cargarGraficos();
+                }
             });
         }
 
@@ -150,6 +161,20 @@ public class DashboardController implements Initializable {
     public void setUsuario(Usuario usuario) {
         this.usuarioActual = usuario;
 
+        if (btnVerTodos != null) {
+            if (usuario.esAdmin()) {
+
+                btnVerTodos.setVisible(false);
+                btnVerTodos.setManaged(false);
+            } else {
+
+                btnVerTodos.setVisible(true);
+                btnVerTodos.setManaged(true);
+
+                btnVerTodos.setSelected(false);
+            }
+        }
+
         if (listaVentasMaestra != null && !listaVentasMaestra.isEmpty()) {
             aplicarFiltrosGlobales();
         }
@@ -157,9 +182,7 @@ public class DashboardController implements Initializable {
 
     public void setVentas(List<Venta> ventas) {
         this.listaVentasMaestra = ventas;
-
-        cargarComboMeses();
-
+        cargarMenuMeses();
         aplicarFiltrosGlobales();
     }
 
@@ -334,25 +357,35 @@ public class DashboardController implements Initializable {
             mapRanking.merge(v.getVendedor().getNombre(), valor, Double::sum);
         }
 
-        llenarGraficoBarras(mapRanking, verPorPlata, true);
+        llenarGraficoBarras(mapRanking, verPorPlata, true, 200);
     }
 
     private void cargarRankingClientes() {
         boolean verPorPlata = btnNeto.isSelected();
-        chartVendedores.setTitle(verPorPlata ? "Mis Clientes ($)" : "Mis Clientes (Bultos)");
+        boolean verTodos = btnVerTodos.isSelected();
+
+        // Cambiamos el título según lo que esté viendo
+        if (verTodos) {
+            chartVendedores.setTitle(verPorPlata ? "Ranking Completo Clientes ($)" : "Ranking Completo Clientes (Bultos)");
+        } else {
+            chartVendedores.setTitle(verPorPlata ? "Top 15 Clientes ($)" : "Top 15 Clientes (Bultos)");
+        }
 
         Map<String, Double> mapRanking = new HashMap<>();
 
         for (Venta v : listaVentas) {
             double valor = verPorPlata ? v.getNeto() : v.getBultos();
-            String cliente = v.getCliente().getNombre();
+            // Asegúrate que sea .getCliente().getNombre() o como lo tengas
+            String cliente = (v.getCliente() != null) ? v.getCliente().getNombre() : "S/D";
             mapRanking.merge(cliente, valor, Double::sum);
         }
 
-        llenarGraficoBarras(mapRanking, verPorPlata, false);
+        int limite = verTodos ? 10000 : 15;
+
+        llenarGraficoBarras(mapRanking, verPorPlata, true, limite);
     }
 
-    private void llenarGraficoBarras(Map<String, Double> mapaDatos, boolean verPorPlata, boolean mostrarNombres) {
+    private void llenarGraficoBarras(Map<String, Double> mapaDatos, boolean verPorPlata, boolean mostrarNombres, int limiteMaximo) {
 
         chartVendedores.getData().clear();
         chartVendedores.layout();
@@ -369,8 +402,13 @@ public class DashboardController implements Initializable {
         List<Map.Entry<String, Double>> listaOrdenada = new ArrayList<>(mapaDatos.entrySet());
         listaOrdenada.sort((a, b) -> b.getValue().compareTo(a.getValue()));
 
+        int contador = 0;
         for (Map.Entry<String, Double> entry : listaOrdenada) {
+            if (contador >= limiteMaximo) {
+                break;
+            }
             serie.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+            contador++;
         }
 
         ObservableList<String> categorias = FXCollections.observableArrayList();
@@ -392,35 +430,91 @@ public class DashboardController implements Initializable {
         }
     }
 
-    private void cargarComboMeses() {
+    private void cargarMenuMeses() {
 
         Set<String> mesesUnicos = new HashSet<>();
         for (Venta v : listaVentasMaestra) {
             mesesUnicos.add(v.getAnioMes());
         }
-
         List<String> listaMeses = new ArrayList<>(mesesUnicos);
         Collections.sort(listaMeses);
 
-        listaMeses.add(0, "Anual");
+        menuMeses.getItems().clear();
 
-        cmbMeses.getItems().clear();
-        cmbMeses.getItems().addAll(listaMeses);
+        CheckMenuItem itemTodos = new CheckMenuItem("Seleccionar Todo");
 
-        cmbMeses.getSelectionModel().select("Anual");
-    }
+        itemTodos.setOnAction(e -> {
+            boolean estado = itemTodos.isSelected();
+            for (var item : menuMeses.getItems()) {
+                if (item instanceof CheckMenuItem && item != itemTodos) {
+                    ((CheckMenuItem) item).setSelected(estado);
+                }
+            }
+            actualizarTextoBotonMeses();
+            aplicarFiltrosGlobales();
+        });
 
-    @FXML
-    private void filtrarPorMes(ActionEvent event) {
-        String seleccion = cmbMeses.getSelectionModel().getSelectedItem();
-        if (seleccion == null) {
-            return;
+        menuMeses.getItems().add(itemTodos);
+        menuMeses.getItems().add(new SeparatorMenuItem()); // Una rayita separadora
+
+        for (String mes : listaMeses) {
+            CheckMenuItem item = new CheckMenuItem(mes);
+
+            item.setOnAction(e -> {
+
+                if (!item.isSelected()) {
+                    itemTodos.setSelected(false);
+                }
+                actualizarTextoBotonMeses();
+                aplicarFiltrosGlobales();
+            });
+
+            menuMeses.getItems().add(item);
         }
 
-        this.mesSeleccionado = seleccion;
+        itemTodos.setSelected(true);
 
-        // Llamamos al método que sabe combinar Mes + Usuario
-        aplicarFiltrosGlobales();
+        itemTodos.fire();
+    }
+
+    private void actualizarTextoBotonMeses() {
+        List<String> seleccionados = new ArrayList<>();
+        boolean estanTodos = true;
+        int contadorMeses = 0;
+
+        for (var item : menuMeses.getItems()) {
+            if (item instanceof CheckMenuItem) {
+                CheckMenuItem check = (CheckMenuItem) item;
+
+                if (check.getText().equals("Seleccionar Todo")) {
+                    continue;
+                }
+
+                if (check.isSelected()) {
+                    seleccionados.add(check.getText());
+                } else {
+                    estanTodos = false;
+                }
+                contadorMeses++;
+            }
+        }
+
+        if (estanTodos && contadorMeses > 0) {
+            menuMeses.setText("Período: Completo (Anual)");
+
+            this.mesSeleccionado = "Anual";
+        } else if (seleccionados.isEmpty()) {
+            menuMeses.setText("Sin meses seleccionados");
+            this.mesSeleccionado = "Ninguno";
+        } else if (seleccionados.size() <= 2) {
+
+            menuMeses.setText("Meses: " + String.join(", ", seleccionados));
+            this.mesSeleccionado = String.join("_", seleccionados);
+        } else {
+
+            menuMeses.setText(seleccionados.size() + " meses seleccionados");
+            this.mesSeleccionado = "Variados";
+        }
     }
 
     @FXML
@@ -528,7 +622,6 @@ public class DashboardController implements Initializable {
     }
 
     private void aplicarFiltrosGlobales() {
-
         if (listaVentasMaestra == null || usuarioActual == null) {
             listaVentas = new ArrayList<>();
             cargarGraficos();
@@ -536,27 +629,29 @@ public class DashboardController implements Initializable {
             return;
         }
 
+        List<String> mesesHabilitados = new ArrayList<>();
+        for (var item : menuMeses.getItems()) {
+            if (item instanceof CheckMenuItem) {
+                CheckMenuItem check = (CheckMenuItem) item;
+
+                if (!check.getText().equals("Seleccionar Todo") && check.isSelected()) {
+                    mesesHabilitados.add(check.getText());
+                }
+            }
+        }
+
         this.listaVentas = new ArrayList<>();
 
         for (Venta v : listaVentasMaestra) {
 
-            boolean pasaFiltroMes = false;
-            if (mesSeleccionado.equals("Anual")) {
-                pasaFiltroMes = true;
-            } else if (v.getAnioMes().equals(mesSeleccionado)) {
-                pasaFiltroMes = true;
-            }
+            boolean pasaFiltroMes = mesesHabilitados.contains(v.getAnioMes());
 
             boolean pasaFiltroUsuario = false;
-
             if (usuarioActual.esAdmin()) {
-
                 pasaFiltroUsuario = true;
             } else {
-
                 String vendedorVenta = v.getVendedor().getNombre();
                 String miCodigo = usuarioActual.getCodigoVendedor();
-
                 if (vendedorVenta != null && miCodigo != null
                         && vendedorVenta.trim().equalsIgnoreCase(miCodigo.trim())) {
                     pasaFiltroUsuario = true;
